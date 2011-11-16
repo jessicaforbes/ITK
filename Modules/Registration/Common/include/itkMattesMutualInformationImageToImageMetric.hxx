@@ -705,7 +705,6 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 {
   // Set up the parameters in the transform
   this->m_Transform->SetParameters(parameters);
-  this->m_Parameters = parameters;
 
   // MUST BE CALLED TO INITIATE PROCESSING
   this->GetValueMultiThreadedInitiate();
@@ -1043,7 +1042,6 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 
   // Set up the parameters in the transform
   this->m_Transform->SetParameters(parameters);
-  this->m_Parameters = parameters;
 
   // MUST BE CALLED TO INITIATE PROCESSING ON SAMPLES
   this->GetValueAndDerivativeMultiThreadedInitiate();
