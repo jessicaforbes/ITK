@@ -283,8 +283,8 @@ private:
   mutable PRatioArrayType       m_PRatioArray;
 
   /** Helper variable for accumulating the derivative of the metric. */
-  mutable DerivativeType  m_MetricDerivative;
-  mutable DerivativeType *m_ThreaderMetricDerivative;
+  //mutable DerivativeType  m_MetricDerivative;
+  mutable std::vector<DerivativeType> m_ThreaderMetricDerivative;
 
   /** The moving image marginal PDF. */
   mutable float *  m_MovingImageMarginalPDF;

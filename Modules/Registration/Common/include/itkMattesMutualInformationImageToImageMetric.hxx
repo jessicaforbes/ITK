@@ -49,8 +49,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 
   m_PRatioArray(),
 
-  m_MetricDerivative(0),
-  m_ThreaderMetricDerivative(NULL),
+  m_ThreaderMetricDerivative(),
 
   // Initialize memory
   m_MovingImageMarginalPDF(NULL),
@@ -115,12 +114,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
   m_ThreaderJointPDFEndBin.resize(0);
 
   m_ThreaderJointPDFSum.resize(0);
-
-  if( this->m_ThreaderMetricDerivative != NULL )
-    {
-    delete[] this->m_ThreaderMetricDerivative;
-    }
-  this->m_ThreaderMetricDerivative = NULL;
+  this->m_ThreaderMetricDerivative.resize(0);
 }
 
 /**
@@ -294,57 +288,6 @@ throw ( ExceptionObject )
 
   JointPDFDerivativesRegionType jointPDFDerivativesRegion;
 
-  //
-  // Now allocate memory according to the user-selected method.
-  //
-  if( this->m_UseExplicitPDFDerivatives )
-    {
-    // Deallocate the memory that may have been allocated for
-    // previous runs of the metric.
-    // and by allocating very small the static ones
-    this->m_PRatioArray.SetSize(1, 1);            // Not needed if m_UseExplicitPDFDerivatives
-    this->m_MetricDerivative = DerivativeType(1); // Not needed if m_UseExplicitPDFDerivatives
-
-    this->m_JointPDFDerivatives = JointPDFDerivativesType::New();
-
-    JointPDFDerivativesIndexType jointPDFDerivativesIndex;
-    JointPDFDerivativesSizeType  jointPDFDerivativesSize;
-
-    // For the derivatives of the joint PDF define a region starting from
-    // {0,0,0}
-    // with size {m_NumberOfParameters,m_NumberOfHistogramBins,
-    // m_NumberOfHistogramBins}. The dimension represents transform parameters,
-    // fixed image parzen window index and moving image parzen window index,
-    // respectively.
-    jointPDFDerivativesIndex.Fill(0);
-    jointPDFDerivativesSize[0] = this->m_NumberOfParameters;
-    jointPDFDerivativesSize[1] = this->m_NumberOfHistogramBins;
-    jointPDFDerivativesSize[2] = this->m_NumberOfHistogramBins;
-
-    jointPDFDerivativesRegion.SetIndex(jointPDFDerivativesIndex);
-    jointPDFDerivativesRegion.SetSize(jointPDFDerivativesSize);
-
-    // Set the regions and allocate
-    m_JointPDFDerivatives->SetRegions(jointPDFDerivativesRegion);
-    m_JointPDFDerivatives->Allocate();
-    m_JointPDFDerivativesBufferSize = jointPDFDerivativesSize[0]
-      * jointPDFDerivativesSize[1]
-      * jointPDFDerivativesSize[2]
-      * sizeof( JointPDFDerivativesValueType );
-    }
-  else
-    {
-    // Deallocate the memory that may have been allocated for
-    // previous runs of the metric.
-    this->m_JointPDFDerivatives = NULL; // Not needed if m_UseExplicitPDFDerivatives=false
-
-    /** Allocate memory for helper array that will contain the pRatios
-     *  for each bin of the joint histogram. This is part of the effort
-     *  for flattening the computation of the PDF Jacobians.
-     */
-    this->m_PRatioArray.SetSize(this->m_NumberOfHistogramBins, this->m_NumberOfHistogramBins);
-    this->m_MetricDerivative = DerivativeType( this->GetNumberOfParameters() );
-    }
 
   // For the joint PDF define a region starting from {0,0}
   // with size {m_NumberOfHistogramBins, m_NumberOfHistogramBins}.
@@ -433,14 +376,39 @@ throw ( ExceptionObject )
     }
   m_ThreaderJointPDFDerivatives = NULL;
 
-  if( m_ThreaderMetricDerivative != NULL )
-    {
-    delete[] m_ThreaderMetricDerivative;
-    }
-  m_ThreaderMetricDerivative = NULL;
-
   if( this->m_UseExplicitPDFDerivatives )
     {
+    // Deallocate the memory that may have been allocated for
+    // previous runs of the metric.
+    // and by allocating very small the static ones
+    this->m_PRatioArray.SetSize(1, 1);            // Not needed if m_UseExplicitPDFDerivatives
+
+    this->m_JointPDFDerivatives = JointPDFDerivativesType::New();
+
+    JointPDFDerivativesIndexType jointPDFDerivativesIndex;
+    JointPDFDerivativesSizeType  jointPDFDerivativesSize;
+
+    // For the derivatives of the joint PDF define a region starting from
+    // {0,0,0}
+    // with size {m_NumberOfParameters,m_NumberOfHistogramBins,
+    // m_NumberOfHistogramBins}. The dimension represents transform parameters,
+    // fixed image parzen window index and moving image parzen window index,
+    // respectively.
+    jointPDFDerivativesIndex.Fill(0);
+    jointPDFDerivativesSize[0] = this->m_NumberOfParameters;
+    jointPDFDerivativesSize[1] = this->m_NumberOfHistogramBins;
+    jointPDFDerivativesSize[2] = this->m_NumberOfHistogramBins;
+
+    jointPDFDerivativesRegion.SetIndex(jointPDFDerivativesIndex);
+    jointPDFDerivativesRegion.SetSize(jointPDFDerivativesSize);
+
+    // Set the regions and allocate
+    m_JointPDFDerivatives->SetRegions(jointPDFDerivativesRegion);
+    m_JointPDFDerivatives->Allocate();
+    m_JointPDFDerivativesBufferSize = jointPDFDerivativesSize[0]
+      * jointPDFDerivativesSize[1]
+      * jointPDFDerivativesSize[2]
+      * sizeof( JointPDFDerivativesValueType );
     m_ThreaderJointPDFDerivatives = new typename
       JointPDFDerivativesType::Pointer[this->m_NumberOfThreads - 1];
     for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads - 1; threadID++ )
@@ -450,13 +418,23 @@ throw ( ExceptionObject )
         jointPDFDerivativesRegion);
       m_ThreaderJointPDFDerivatives[threadID]->Allocate();
       }
+    this->m_ThreaderMetricDerivative.resize(1);
     }
   else
     {
-    m_ThreaderMetricDerivative = new DerivativeType[this->m_NumberOfThreads - 1];
-    for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads - 1; threadID++ )
+    // Deallocate the memory that may have been allocated for
+    // previous runs of the metric.
+    this->m_JointPDFDerivatives = NULL; // Not needed if m_UseExplicitPDFDerivatives=false
+
+    /** Allocate memory for helper array that will contain the pRatios
+     *  for each bin of the joint histogram. This is part of the effort
+     *  for flattening the computation of the PDF Jacobians.
+     */
+    this->m_PRatioArray.SetSize(this->m_NumberOfHistogramBins, this->m_NumberOfHistogramBins);
+    m_ThreaderMetricDerivative.resize(this->m_NumberOfThreads, DerivativeType( this->GetNumberOfParameters() ) );
+    for(ThreadIdType threadID =0; threadID < this->m_NumberOfThreads; threadID++)
       {
-      this->m_ThreaderMetricDerivative[threadID] = DerivativeType( this->GetNumberOfParameters() );
+      m_ThreaderMetricDerivative[threadID].Fill(0.0);
       }
     }
 }
@@ -1001,8 +979,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
   else
     {
     this->m_PRatioArray.Fill(0.0);
-    this->m_MetricDerivative.Fill(NumericTraits<MeasureType>::Zero);
-    for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads - 1; threadID++ )
+    for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads; threadID++ )
       {
       this->m_ThreaderMetricDerivative[threadID].Fill(NumericTraits<MeasureType>::Zero);
       }
@@ -1132,16 +1109,16 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
     this->GetValueAndDerivativeMultiThreadedPostProcessInitiate();
     // Consolidate the contributions from each one of the threads to the total
     // derivative.
-    for( unsigned int t = 0; t < this->m_NumberOfThreads - 1; t++ )
+    for( unsigned int t = 1; t < this->m_NumberOfThreads; t++ )
       {
       DerivativeType const * const source = &( this->m_ThreaderMetricDerivative[t] );
       for( unsigned int pp = 0; pp < this->m_NumberOfParameters; pp++ )
         {
-        this->m_MetricDerivative[pp] += ( *source )[pp];
+        this->m_ThreaderMetricDerivative[0][pp] += ( *source )[pp];
         }
       }
 
-    derivative = this->m_MetricDerivative;
+    derivative = this->m_ThreaderMetricDerivative[0];
     }
 
   value = static_cast<MeasureType>( -1.0 * sum );
@@ -1204,14 +1181,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
     derivPtr = 0;
     // Recover the precomputed weight for this specific PDF bin
     precomputedWeight = this->m_PRatioArray[pdfFixedIndex][pdfMovingIndex];
-    if( threadID > 0 )
-      {
-      derivativeHelperArray = &( this->m_ThreaderMetricDerivative[threadID - 1] );
-      }
-    else
-      {
-      derivativeHelperArray = &( this->m_MetricDerivative );
-      }
+    derivativeHelperArray = &( this->m_ThreaderMetricDerivative[threadID] );
     }
 
   if( !this->m_TransformIsBSpline )
