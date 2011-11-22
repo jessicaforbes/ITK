@@ -235,12 +235,6 @@ private:
   //purposely not implemented
   void operator=(const Self &);
 
-  typedef float *MarginalPDFType;
-
-  mutable MarginalPDFType m_FixedImageMarginalPDF;
-
-  /** The moving image marginal PDF. */
-  mutable MarginalPDFType m_MovingImageMarginalPDF;
 
   /** Helper array for storing the values of the JointPDF ratios. */
   typedef double                PRatioType;
@@ -302,13 +296,16 @@ private:
                                      double cubicBSplineDerivativeValue
                                      ) const;
 
+  /** The moving image marginal PDF. */
+  mutable float *  m_MovingImageMarginalPDF;
+  mutable float * m_FixedImageMarginalPDF;
   PDFValueType *m_ThreaderFixedImageMarginalPDF;
 
   typename JointPDFType::Pointer              * m_ThreaderJointPDF;
   typename JointPDFDerivativesType::Pointer   * m_ThreaderJointPDFDerivatives;
 
-  int *m_ThreaderJointPDFStartBin;
-  int *m_ThreaderJointPDFEndBin;
+  std::vector<int> m_ThreaderJointPDFStartBin;
+  std::vector<int> m_ThreaderJointPDFEndBin;
 
   mutable double *m_ThreaderJointPDFSum;
 

@@ -66,8 +66,8 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
   m_ThreaderFixedImageMarginalPDF(NULL),
   m_ThreaderJointPDF(NULL),
   m_ThreaderJointPDFDerivatives(NULL),
-  m_ThreaderJointPDFStartBin(NULL),
-  m_ThreaderJointPDFEndBin(NULL),
+  m_ThreaderJointPDFStartBin(),
+  m_ThreaderJointPDFEndBin(),
   m_ThreaderJointPDFSum(NULL),
   m_JointPDFSum(0.0),
 
@@ -112,17 +112,8 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
     }
   m_ThreaderFixedImageMarginalPDF = NULL;
 
-  if( m_ThreaderJointPDFStartBin != NULL )
-    {
-    delete[] m_ThreaderJointPDFStartBin;
-    }
-  m_ThreaderJointPDFStartBin = NULL;
-
-  if( m_ThreaderJointPDFEndBin != NULL )
-    {
-    delete[] m_ThreaderJointPDFEndBin;
-    }
-  m_ThreaderJointPDFEndBin = NULL;
+  m_ThreaderJointPDFStartBin.resize(0);
+  m_ThreaderJointPDFEndBin.resize(0);
 
   if( m_ThreaderJointPDFSum != NULL )
     {
@@ -415,39 +406,32 @@ throw ( ExceptionObject )
   m_ThreaderJointPDF = new typename
     JointPDFType::Pointer[this->m_NumberOfThreads - 1];
 
-  if( m_ThreaderJointPDFStartBin != NULL )
-    {
-    delete[] m_ThreaderJointPDFStartBin;
-    }
-  m_ThreaderJointPDFStartBin = new int[this->m_NumberOfThreads];
-
-  if( m_ThreaderJointPDFEndBin != NULL )
-    {
-    delete[] m_ThreaderJointPDFEndBin;
-    }
-  m_ThreaderJointPDFEndBin = new int[this->m_NumberOfThreads];
-
   if( m_ThreaderJointPDFSum != NULL )
     {
     delete[] m_ThreaderJointPDFSum;
     }
   m_ThreaderJointPDFSum = new double[this->m_NumberOfThreads];
 
-  const int binRange = m_NumberOfHistogramBins / this->m_NumberOfThreads;
   for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads - 1; threadID++ )
     {
     m_ThreaderJointPDF[threadID] = JointPDFType::New();
     m_ThreaderJointPDF[threadID]->SetRegions(jointPDFRegion);
     m_ThreaderJointPDF[threadID]->Allocate();
-
-    m_ThreaderJointPDFStartBin[threadID] = threadID * binRange;
-    m_ThreaderJointPDFEndBin[threadID] = ( threadID + 1 ) * binRange - 1;
     }
 
-  m_ThreaderJointPDFStartBin[this->m_NumberOfThreads - 1] =
-    ( this->m_NumberOfThreads - 1 ) * binRange;
 
-  m_ThreaderJointPDFEndBin[this->m_NumberOfThreads - 1] = m_NumberOfHistogramBins - 1;
+    {
+    m_ThreaderJointPDFStartBin.resize( this->m_NumberOfThreads );
+    m_ThreaderJointPDFEndBin.resize(this->m_NumberOfThreads );
+    const int binRange = m_NumberOfHistogramBins / this->m_NumberOfThreads;
+    for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads; threadID++ )
+      {
+      m_ThreaderJointPDFStartBin[threadID] = threadID * binRange;
+      m_ThreaderJointPDFEndBin[threadID] = ( threadID + 1 ) * binRange - 1;
+      }
+    //Ensure that the last EndBin range contains the last histogram bin
+    m_ThreaderJointPDFEndBin[this->m_NumberOfThreads - 1] = m_NumberOfHistogramBins - 1;
+    }
 
   // Release memory of arrays that may have been used for
   // previous executions of this metric with different settings
