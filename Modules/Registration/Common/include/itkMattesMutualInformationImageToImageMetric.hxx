@@ -36,21 +36,6 @@ namespace itk
 template <class TFixedImage, class TMovingImage>
 MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 ::MattesMutualInformationImageToImageMetric() :
-  // Initialize memory
-  m_FixedImageMarginalPDF(NULL),
-  m_MovingImageMarginalPDF(NULL),
-
-  m_PRatioArray(),
-
-  m_MetricDerivative(0),
-  m_ThreaderMetricDerivative(NULL),
-
-  // Initialize PDFs to NULL
-  m_JointPDF(NULL),
-  m_JointPDFBufferSize(0),
-  m_JointPDFDerivatives(NULL),
-  m_JointPDFDerivativesBufferSize(0),
-
   m_NumberOfHistogramBins(50),
   m_MovingImageNormalizedMin(0.0),
   m_FixedImageNormalizedMin(0.0),
@@ -62,14 +47,28 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
   m_CubicBSplineKernel(NULL),
   m_CubicBSplineDerivativeKernel(NULL),
 
-  // For multi-threading the metric
+  m_PRatioArray(),
+
+  m_MetricDerivative(0),
+  m_ThreaderMetricDerivative(NULL),
+
+  // Initialize memory
+  m_MovingImageMarginalPDF(NULL),
+  m_FixedImageMarginalPDF(NULL),
   m_ThreaderFixedImageMarginalPDF(NULL),
+
+  // Initialize PDFs to NULL
+  m_JointPDFBufferSize(0),
+  m_JointPDFDerivativesBufferSize(0),
+
+  // For multi-threading the metric
+  m_JointPDF(NULL),
   m_ThreaderJointPDF(NULL),
+  m_JointPDFDerivatives(NULL),
   m_ThreaderJointPDFDerivatives(NULL),
   m_ThreaderJointPDFStartBin(),
   m_ThreaderJointPDFEndBin(),
-  m_ThreaderJointPDFSum(NULL),
-  m_JointPDFSum(0.0),
+  m_ThreaderJointPDFSum(),
 
   m_UseExplicitPDFDerivatives(true),
   m_ImplicitDerivativesSecondPass(false)
@@ -115,11 +114,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
   m_ThreaderJointPDFStartBin.resize(0);
   m_ThreaderJointPDFEndBin.resize(0);
 
-  if( m_ThreaderJointPDFSum != NULL )
-    {
-    delete[] m_ThreaderJointPDFSum;
-    }
-  m_ThreaderJointPDFSum = NULL;
+  m_ThreaderJointPDFSum.resize(0);
 
   if( this->m_ThreaderMetricDerivative != NULL )
     {
@@ -406,11 +401,7 @@ throw ( ExceptionObject )
   m_ThreaderJointPDF = new typename
     JointPDFType::Pointer[this->m_NumberOfThreads - 1];
 
-  if( m_ThreaderJointPDFSum != NULL )
-    {
-    delete[] m_ThreaderJointPDFSum;
-    }
-  m_ThreaderJointPDFSum = new double[this->m_NumberOfThreads];
+  m_ThreaderJointPDFSum.resize(this->m_NumberOfThreads);
 
   for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads - 1; threadID++ )
     {
@@ -671,14 +662,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
     {
     jointPDFSum += *( pdfPtr++ );
     }
-  if( threadID > 0 )
-    {
-    m_ThreaderJointPDFSum[threadID - 1] = jointPDFSum;
-    }
-  else
-    {
-    m_JointPDFSum = jointPDFSum;
-    }
+    m_ThreaderJointPDFSum[threadID] = jointPDFSum;
 }
 
 template <class TFixedImage, class TMovingImage>
@@ -695,11 +679,12 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 
   // MUST BE CALLED TO INITIATE PROCESSING
   this->GetValueMultiThreadedPostProcessInitiate();
-  for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads - 1; threadID++ )
+  // Consolidate to the first element in the vector
+  for( ThreadIdType threadID = 1; threadID < this->m_NumberOfThreads; threadID++ )
     {
-    m_JointPDFSum += m_ThreaderJointPDFSum[threadID];
+    m_ThreaderJointPDFSum[0] += m_ThreaderJointPDFSum[threadID];
     }
-  if( m_JointPDFSum == 0.0 )
+  if( m_ThreaderJointPDFSum[0] == 0.0 )
     {
     itkExceptionMacro("Joint PDF summed to zero\n" << m_JointPDF );
     }
@@ -708,7 +693,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
           0,
           m_NumberOfHistogramBins * sizeof( PDFValueType ) );
 
-  const double       nFactor = 1.0 / m_JointPDFSum;
+  const double       nFactor = 1.0 / m_ThreaderJointPDFSum[0];
   JointPDFValueType *pdfPtr = m_JointPDF->GetBufferPointer();
   double             fixedPDFSum = 0.0;
   for( unsigned int i = 0; i < m_NumberOfHistogramBins; i++ )
@@ -1032,11 +1017,11 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 
   // CALL IF DOING THREADED POST PROCESSING
   this->GetValueAndDerivativeMultiThreadedPostProcessInitiate();
-  for( ThreadIdType threadID = 0; threadID < this->m_NumberOfThreads - 1; threadID++ )
+  for( ThreadIdType threadID = 1; threadID < this->m_NumberOfThreads; threadID++ )
     {
-    m_JointPDFSum += m_ThreaderJointPDFSum[threadID];
+    m_ThreaderJointPDFSum[0] += m_ThreaderJointPDFSum[threadID];
     }
-  if( m_JointPDFSum == 0.0 )
+  if( m_ThreaderJointPDFSum[0] == 0.0 )
     {
     itkExceptionMacro("Joint PDF summed to zero");
     }
@@ -1046,7 +1031,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
           m_NumberOfHistogramBins * sizeof( PDFValueType ) );
 
   double       fixedPDFSum = 0.0;
-  const double normalizationFactor = 1.0 / m_JointPDFSum;
+  const double normalizationFactor = 1.0 / m_ThreaderJointPDFSum[0];
 
   JointPDFValueType *pdfPtr = m_JointPDF->GetBufferPointer();
   for( unsigned int i = 0; i < m_NumberOfHistogramBins; i++ )

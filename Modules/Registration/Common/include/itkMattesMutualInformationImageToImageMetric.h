@@ -235,16 +235,6 @@ private:
   //purposely not implemented
   void operator=(const Self &);
 
-
-  /** Helper array for storing the values of the JointPDF ratios. */
-  typedef double                PRatioType;
-  typedef Array2D< PRatioType > PRatioArrayType;
-  mutable PRatioArrayType m_PRatioArray;
-
-  /** Helper variable for accumulating the derivative of the metric. */
-  mutable DerivativeType  m_MetricDerivative;
-  mutable DerivativeType *m_ThreaderMetricDerivative;
-
   typedef JointPDFType::IndexType             JointPDFIndexType;
   typedef JointPDFType::PixelType             JointPDFValueType;
   typedef JointPDFType::RegionType            JointPDFRegionType;
@@ -253,15 +243,6 @@ private:
   typedef JointPDFDerivativesType::PixelType  JointPDFDerivativesValueType;
   typedef JointPDFDerivativesType::RegionType JointPDFDerivativesRegionType;
   typedef JointPDFDerivativesType::SizeType   JointPDFDerivativesSizeType;
-
-  /** The joint PDF and PDF derivatives. */
-  typename JointPDFType::Pointer m_JointPDF;
-
-  SizeValueType m_JointPDFBufferSize;
-
-  typename JointPDFDerivativesType::Pointer m_JointPDFDerivatives;
-
-  SizeValueType m_JointPDFDerivativesBufferSize;
 
   /** Variables to define the marginal and joint histograms. */
   SizeValueType m_NumberOfHistogramBins;
@@ -296,20 +277,37 @@ private:
                                      double cubicBSplineDerivativeValue
                                      ) const;
 
+  /** Helper array for storing the values of the JointPDF ratios. */
+  typedef double                PRatioType;
+  typedef Array2D< PRatioType > PRatioArrayType;
+  mutable PRatioArrayType       m_PRatioArray;
+
+  /** Helper variable for accumulating the derivative of the metric. */
+  mutable DerivativeType  m_MetricDerivative;
+  mutable DerivativeType *m_ThreaderMetricDerivative;
+
   /** The moving image marginal PDF. */
   mutable float *  m_MovingImageMarginalPDF;
   mutable float * m_FixedImageMarginalPDF;
   PDFValueType *m_ThreaderFixedImageMarginalPDF;
 
-  typename JointPDFType::Pointer              * m_ThreaderJointPDF;
-  typename JointPDFDerivativesType::Pointer   * m_ThreaderJointPDFDerivatives;
+  SizeValueType m_JointPDFBufferSize;
+  SizeValueType m_JointPDFDerivativesBufferSize;
+
+  /** The joint PDF and PDF derivatives. */
+  typename JointPDFType::Pointer            m_JointPDF;
+  typename JointPDFType::Pointer            * m_ThreaderJointPDF;
+
+  typename JointPDFDerivativesType::Pointer m_JointPDFDerivatives;
+  typename JointPDFDerivativesType::Pointer * m_ThreaderJointPDFDerivatives;
 
   std::vector<int> m_ThreaderJointPDFStartBin;
   std::vector<int> m_ThreaderJointPDFEndBin;
 
-  mutable double *m_ThreaderJointPDFSum;
+  mutable std::vector<double> m_ThreaderJointPDFSum;
+  //HACK mutable double m_JointPDFSum;
+  //HACK mutable double *m_ThreaderJointPDFSum;
 
-  mutable double m_JointPDFSum;
 
   bool         m_UseExplicitPDFDerivatives;
   mutable bool m_ImplicitDerivativesSecondPass;
