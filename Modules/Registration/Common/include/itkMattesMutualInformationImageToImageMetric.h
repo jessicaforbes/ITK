@@ -294,19 +294,16 @@ private:
   SizeValueType m_JointPDFDerivativesBufferSize;
 
   /** The joint PDF and PDF derivatives. */
-  typename JointPDFType::Pointer            m_JointPDF;
-  typename JointPDFType::Pointer            * m_ThreaderJointPDF;
+  typename JointPDFType::Pointer                         m_JointPDF;
+  typename std::vector<JointPDFType::Pointer>            m_ThreaderJointPDF;
 
-  typename JointPDFDerivativesType::Pointer m_JointPDFDerivatives;
-  typename JointPDFDerivativesType::Pointer * m_ThreaderJointPDFDerivatives;
+  typename JointPDFDerivativesType::Pointer              m_JointPDFDerivatives;
+  typename std::vector<JointPDFDerivativesType::Pointer> m_ThreaderJointPDFDerivatives;
 
   std::vector<int> m_ThreaderJointPDFStartBin;
   std::vector<int> m_ThreaderJointPDFEndBin;
 
   mutable std::vector<double> m_ThreaderJointPDFSum;
-  //HACK mutable double m_JointPDFSum;
-  //HACK mutable double *m_ThreaderJointPDFSum;
-
 
   bool         m_UseExplicitPDFDerivatives;
   mutable bool m_ImplicitDerivativesSecondPass;

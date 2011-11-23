@@ -61,9 +61,9 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 
   // For multi-threading the metric
   m_JointPDF(NULL),
-  m_ThreaderJointPDF(NULL),
+  m_ThreaderJointPDF(),
   m_JointPDFDerivatives(NULL),
-  m_ThreaderJointPDFDerivatives(NULL),
+  m_ThreaderJointPDFDerivatives(),
   m_ThreaderJointPDFStartBin(),
   m_ThreaderJointPDFEndBin(),
   m_ThreaderJointPDFSum(),
@@ -264,7 +264,7 @@ throw ( ExceptionObject )
 
     {
     JointPDFRegionType jointPDFRegion;
-    //HACK  {
+      {
       // For the joint PDF define a region starting from {0,0}
       // with size {m_NumberOfHistogramBins, m_NumberOfHistogramBins}.
       // The dimension represents fixed image parzen window index
@@ -276,7 +276,7 @@ throw ( ExceptionObject )
 
       jointPDFRegion.SetIndex(jointPDFIndex);
       jointPDFRegion.SetSize(jointPDFSize);
-      //HACK}
+      }
 
     // By setting these values, the joint histogram physical locations will correspond to intensity values.
     typename JointPDFType::PointType origin;
@@ -289,12 +289,7 @@ throw ( ExceptionObject )
      * Allocate memory for the joint PDF and joint PDF derivatives.
      * The joint PDF and joint PDF derivatives are store as itk::Image.
      */
-    if( m_ThreaderJointPDF != NULL )
-      {
-      delete[] m_ThreaderJointPDF;
-      }
-    m_ThreaderJointPDF = new typename JointPDFType::Pointer[this->m_NumberOfThreads - 1];
-
+    this->m_ThreaderJointPDF.resize(this->m_NumberOfThreads - 1);
     for( ThreadIdType threadID = 1; threadID < this->m_NumberOfThreads; ++threadID )
       {
       m_ThreaderJointPDF[threadID-1]= JointPDFType::New();
@@ -310,22 +305,10 @@ throw ( ExceptionObject )
     m_JointPDF->Allocate();
 
     //HACK: Eventually this should go away as well
-    m_JointPDFBufferSize = jointPDFSize[0] * jointPDFSize[1] * sizeof( PDFValueType );
-    //m_JointPDFBufferSize = jointPDFRegion.GetNumberOfPixels() * sizeof( PDFValueType );
+    //m_JointPDFBufferSize = jointPDFSize[0] * jointPDFSize[1] * sizeof( PDFValueType );
+    m_JointPDFBufferSize = jointPDFRegion.GetNumberOfPixels() * sizeof( PDFValueType );
     }
 
-
-
-
-
-  // Release memory of arrays that may have been used for
-  // previous executions of this metric with different settings
-  // of the memory caching flags.
-  if( m_ThreaderJointPDFDerivatives != NULL )
-    {
-    delete[] m_ThreaderJointPDFDerivatives;
-    }
-  m_ThreaderJointPDFDerivatives = NULL;
 
   if( this->m_UseExplicitPDFDerivatives )
     {
@@ -338,7 +321,7 @@ throw ( ExceptionObject )
       {
       JointPDFDerivativesRegionType jointPDFDerivativesRegion;
 
-        //HACK{
+        {
         // For the derivatives of the joint PDF define a region starting from
         // {0,0,0}
         // with size {m_NumberOfParameters,m_NumberOfHistogramBins,
@@ -354,10 +337,10 @@ throw ( ExceptionObject )
 
         jointPDFDerivativesRegion.SetIndex(jointPDFDerivativesIndex);
         jointPDFDerivativesRegion.SetSize(jointPDFDerivativesSize);
-        //HACK}
+        }
 
       //HACK: Use this-> consistantly.
-      this->m_ThreaderJointPDFDerivatives = new typename JointPDFDerivativesType::Pointer[this->m_NumberOfThreads - 1];
+      this->m_ThreaderJointPDFDerivatives.resize(this->m_NumberOfThreads-1);
       // Set the regions and allocate
       for( ThreadIdType threadID = 1; threadID < this->m_NumberOfThreads; threadID++ )
         {
@@ -368,16 +351,16 @@ throw ( ExceptionObject )
       this->m_JointPDFDerivatives = JointPDFDerivativesType::New();
       m_JointPDFDerivatives->SetRegions(jointPDFDerivativesRegion);
       m_JointPDFDerivatives->Allocate();
-
-      m_JointPDFDerivativesBufferSize = jointPDFDerivativesSize[0] * jointPDFDerivativesSize[1] * jointPDFDerivativesSize[2] * sizeof( JointPDFDerivativesValueType );
-      //m_JointPDFDerivativesBufferSize = jointPDFDerivativesRegion.GetNumberOfPixels() * sizeof( JointPDFDerivativesValueType );
+      //HACK:  FOllwoing goes away`
+      //m_JointPDFDerivativesBufferSize = jointPDFDerivativesSize[0] * jointPDFDerivativesSize[1] * jointPDFDerivativesSize[2] * sizeof( JointPDFDerivativesValueType );
+      m_JointPDFDerivativesBufferSize = jointPDFDerivativesRegion.GetNumberOfPixels() * sizeof( JointPDFDerivativesValueType );
       }
     }
   else
     {
     // Deallocate the memory that may have been allocated for
     // previous runs of the metric.
-    this->m_JointPDFDerivatives = NULL; // Not needed if m_UseExplicitPDFDerivatives=false
+    m_ThreaderJointPDFDerivatives.resize(0); // Not needed if m_UseExplicitPDFDerivatives=false
 
     /** Allocate memory for helper array that will contain the pRatios
      *  for each bin of the joint histogram. This is part of the effort
@@ -453,12 +436,12 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 
   if( threadID > 0 )
     {
-    memset(m_ThreaderJointPDF[threadID - 1]->GetBufferPointer(), 0, m_JointPDFBufferSize);
+    m_ThreaderJointPDF[threadID-1]->FillBuffer(0.0F);
     }
   else
     {
     // zero-th thread uses the variables directly
-    memset(m_JointPDF->GetBufferPointer(), 0, m_JointPDFBufferSize);
+    m_JointPDF->FillBuffer(0.0F);
     }
   std::fill(this->m_ThreaderFixedImageMarginalPDF[threadID].begin(), this->m_ThreaderFixedImageMarginalPDF[threadID].end(), 0.0F);
 }
