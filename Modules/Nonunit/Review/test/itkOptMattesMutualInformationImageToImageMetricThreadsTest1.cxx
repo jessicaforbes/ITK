@@ -116,7 +116,7 @@ int itkOptMattesMutualInformationImageToImageMetricThreadsTest1( int argc, char*
   std::vector< DerivativeType > derivatives;
 
   // By now restrict the number of threads to test to the range 1 to 4.
-  const unsigned int maximumNumberOfThreadsToTest = 5;
+  const unsigned int maximumNumberOfThreadsToTest = defaultNumberOfThreads;
 
   for( unsigned int numberOfThreads = 1; numberOfThreads < maximumNumberOfThreadsToTest; numberOfThreads++ )
     {
@@ -165,8 +165,8 @@ int itkOptMattesMutualInformationImageToImageMetricThreadsTest1( int argc, char*
         {
         if( verbose )
           {
-          std::cerr << i << " : " << j;
-          std::cerr << " Differ by " << difference;
+          std::cerr << i+1  << "thread vs. " << j+1;
+          std::cerr << " thread differ by " << difference;
           std::cerr << " from " << values[i];
           std::cerr << " to " << values[j];
           std::cerr << std::endl;
