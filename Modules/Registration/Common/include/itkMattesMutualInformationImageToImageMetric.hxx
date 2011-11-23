@@ -81,6 +81,7 @@ template <class TFixedImage, class TMovingImage>
 MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 ::~MattesMutualInformationImageToImageMetric()
 {
+#if 0 //No need to resize in destructor, std::vector cleans up itself
   if( m_ThreaderJointPDF != NULL )
     {
     delete[] m_ThreaderJointPDF;
@@ -93,7 +94,6 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
     }
   m_ThreaderJointPDFDerivatives = NULL;
 
-#if 0 //No need to resize in destructor, std::vector cleans up itself
   m_MovingImageMarginalPDF.resize(0);
   m_ThreaderFixedImageMarginalPDF.resize(0);
 
@@ -206,12 +206,12 @@ throw ( ExceptionObject )
         ++mi;
         }
       }
-    }
 
-  itkDebugMacro(" FixedImageMin: " << m_FixedImageTrueMin
+    itkDebugMacro(" FixedImageMin: " << m_FixedImageTrueMin
                                    << " FixedImageMax: " << m_FixedImageTrueMax << std::endl);
-  itkDebugMacro(" MovingImageMin: " << m_MovingImageTrueMin
+    itkDebugMacro(" MovingImageMin: " << m_MovingImageTrueMin
                                     << " MovingImageMax: " << m_MovingImageTrueMax << std::endl);
+    }
 
   /**
    * Compute binsize for the histograms.
@@ -288,18 +288,6 @@ throw ( ExceptionObject )
   m_JointPDF->Allocate();
 
   m_JointPDFBufferSize = jointPDFSize[0] * jointPDFSize[1] * sizeof( PDFValueType );
-
-  /**
-   * Setup the kernels used for the Parzen windows.
-   */
-  m_CubicBSplineKernel = CubicBSplineFunctionType::New();
-  m_CubicBSplineDerivativeKernel = CubicBSplineDerivativeFunctionType::New();
-
-  /**
-   * Pre-compute the fixed image parzen window index for
-   * each point of the fixed image sample points list.
-   */
-  this->ComputeFixedImageParzenWindowIndices(this->m_FixedImageSamples);
 
   /**
    * Allocate memory for the marginal PDF and initialize values
@@ -406,6 +394,19 @@ throw ( ExceptionObject )
       m_ThreaderMetricDerivative[threadID].Fill(0.0);
       }
     }
+  /**
+   * Setup the kernels used for the Parzen windows.
+   */
+  m_CubicBSplineKernel = CubicBSplineFunctionType::New();
+  m_CubicBSplineDerivativeKernel = CubicBSplineDerivativeFunctionType::New();
+
+  /**
+   * Pre-compute the fixed image parzen window index for
+   * each point of the fixed image sample points list.
+   */
+  //NOTE:  Need to have computed m_FisedImageBinSize here.
+  this->ComputeFixedImageParzenWindowIndices(this->m_FixedImageSamples);
+
 }
 
 /**
@@ -415,8 +416,7 @@ throw ( ExceptionObject )
 template <class TFixedImage, class TMovingImage>
 void
 MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
-::ComputeFixedImageParzenWindowIndices(
-  FixedImageSampleContainer & samples)
+::ComputeFixedImageParzenWindowIndices( FixedImageSampleContainer & samples)
 {
   const typename FixedImageSampleContainer::const_iterator end = samples.end();
   for( typename FixedImageSampleContainer::iterator iter = samples.begin();
@@ -462,9 +462,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
   else
     {
     // zero-th thread uses the variables directly
-    memset(m_JointPDF->GetBufferPointer(),
-           0,
-           m_JointPDFBufferSize);
+    memset(m_JointPDF->GetBufferPointer(), 0, m_JointPDFBufferSize);
     }
   std::fill(this->m_ThreaderFixedImageMarginalPDF[threadID].begin(), this->m_ThreaderFixedImageMarginalPDF[threadID].end(), 0.0F);
 }
