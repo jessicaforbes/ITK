@@ -287,8 +287,8 @@ private:
   mutable std::vector<DerivativeType> m_ThreaderMetricDerivative;
 
   /** The moving image marginal PDF. */
-  mutable std::vector<PDFValueType>  m_MovingImageMarginalPDF;
-  mutable float * m_FixedImageMarginalPDF;
+  mutable std::vector<PDFValueType> m_MovingImageMarginalPDF;
+  mutable std::vector<PDFValueType> m_FixedImageMarginalPDF;
   PDFValueType *m_ThreaderFixedImageMarginalPDF;
 
   SizeValueType m_JointPDFBufferSize;

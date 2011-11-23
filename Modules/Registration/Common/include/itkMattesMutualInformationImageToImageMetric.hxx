@@ -53,7 +53,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 
   // Initialize memory
   m_MovingImageMarginalPDF(),
-  m_FixedImageMarginalPDF(NULL),
+  m_FixedImageMarginalPDF(),
   m_ThreaderFixedImageMarginalPDF(NULL),
 
   // Initialize PDFs to NULL
@@ -82,11 +82,6 @@ template <class TFixedImage, class TMovingImage>
 MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
 ::~MattesMutualInformationImageToImageMetric()
 {
-  if( m_FixedImageMarginalPDF != NULL )
-    {
-    delete[] m_FixedImageMarginalPDF;
-    }
-  m_FixedImageMarginalPDF = NULL;
   if( m_ThreaderJointPDF != NULL )
     {
     delete[] m_ThreaderJointPDF;
@@ -99,14 +94,10 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
     }
   m_ThreaderJointPDFDerivatives = NULL;
 
-  if( m_ThreaderFixedImageMarginalPDF != NULL )
-    {
-    delete[] m_ThreaderFixedImageMarginalPDF;
-    }
-  m_ThreaderFixedImageMarginalPDF = NULL;
-
 #if 0 //No need to resize in destructor, std::vector cleans up itself
   m_MovingImageMarginalPDF.resize(0);
+  m_FixedImageMarginalPDF.resize(0);
+  m_ThreaderFixedImageMarginalPDF.resize(0);
 
   m_ThreaderJointPDFStartBin.resize(0);
   m_ThreaderJointPDFEndBin.resize(0);
@@ -316,11 +307,6 @@ throw ( ExceptionObject )
    * Allocate memory for the marginal PDF and initialize values
    * to zero. The marginal PDFs are stored as std::vector.
    */
-  if( m_FixedImageMarginalPDF != NULL )
-    {
-    delete[] m_FixedImageMarginalPDF;
-    }
-  m_FixedImageMarginalPDF = new PDFValueType[m_NumberOfHistogramBins];
 
   if( m_ThreaderFixedImageMarginalPDF != NULL )
     {
@@ -328,6 +314,7 @@ throw ( ExceptionObject )
     }
   m_MovingImageMarginalPDF.resize(m_NumberOfHistogramBins,0.0F);
   // Assumes number of threads doesn't change between calls to Initialize
+  m_FixedImageMarginalPDF.resize(m_NumberOfHistogramBins,0.0F);
   m_ThreaderFixedImageMarginalPDF = new PDFValueType[( this->m_NumberOfThreads - 1 ) * m_NumberOfHistogramBins];
 
   if( m_ThreaderJointPDF != NULL )
@@ -490,7 +477,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
     memset(m_JointPDF->GetBufferPointer(),
            0,
            m_JointPDFBufferSize);
-    memset( m_FixedImageMarginalPDF, 0, m_NumberOfHistogramBins * sizeof( PDFValueType ) );
+    std::fill(this->m_FixedImageMarginalPDF.begin(), this->m_FixedImageMarginalPDF.end(), 0.0F);
     }
 }
 
@@ -749,9 +736,7 @@ MattesMutualInformationImageToImageMetric<TFixedImage, TMovingImage>
     memset(m_JointPDF->GetBufferPointer(),
            0,
            m_JointPDFBufferSize);
-    memset( m_FixedImageMarginalPDF,
-            0,
-            m_NumberOfHistogramBins * sizeof( PDFValueType ) );
+    std::fill(this->m_FixedImageMarginalPDF.begin(), this->m_FixedImageMarginalPDF.end(), 0.0F);
 
     if( this->m_UseExplicitPDFDerivatives )
       {
