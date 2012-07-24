@@ -148,6 +148,7 @@ ContourDirectedMeanDistanceImageFilter< TInputImage1, TInputImage2 >
   filter->SetInput( this->GetInput2() );
   filter->SetSquaredDistance(false);
   filter->SetUseImageSpacing(m_UseImageSpacing);
+  filter->SetInsideIsPositive(true);
   filter->Update();
 
   m_DistanceMap = filter->GetOutput();

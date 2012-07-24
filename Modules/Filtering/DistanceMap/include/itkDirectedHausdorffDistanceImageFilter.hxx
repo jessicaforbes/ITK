@@ -20,13 +20,13 @@
 
 #include "itkDirectedHausdorffDistanceImageFilter.h"
 #include "itkImageRegionIterator.h"
-#include "itkSignedMaurerDistanceMapImageFilter.h"
 #include "itkProgressReporter.h"
 
 namespace itk
 {
-template< class TInputImage1, class TInputImage2 >
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::DirectedHausdorffDistanceImageFilter():m_MaxDistance(1)
 {
   // this filter requires two input images
@@ -38,44 +38,44 @@ DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
   m_UseImageSpacing     = true;
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::SetInput1(const TInputImage1 *image)
 {
   this->SetInput( image );
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::SetInput2(const TInputImage2 *image)
 {
   this->SetNthInput( 1, const_cast< TInputImage2 * >( image ) );
 }
 
-template< class TInputImage1, class TInputImage2 >
-const typename DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
+const typename DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::InputImage1Type *
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::GetInput1()
 {
   return this->GetInput();
 }
 
-template< class TInputImage1, class TInputImage2 >
-const typename DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
+const typename DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::InputImage2Type *
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::GetInput2()
 {
   return static_cast< const TInputImage2 * >
          ( this->ProcessObject::GetInput(1) );
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::GenerateInputRequestedRegion()
 {
   Superclass::GenerateInputRequestedRegion();
@@ -99,30 +99,30 @@ DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
     }
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::EnlargeOutputRequestedRegion(DataObject *data)
 {
   Superclass::EnlargeOutputRequestedRegion(data);
   data->SetRequestedRegionToLargestPossibleRegion();
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::AllocateOutputs()
 {
-  // Pass the first input through as the output
+  // Pass the first input through as the output // The output images are really useless in this case
   InputImage1Pointer image =
     const_cast< TInputImage1 * >( this->GetInput1() );
 
   this->GraftOutput(image);
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::BeforeThreadedGenerateData()
 {
   ThreadIdType numberOfThreads = this->GetNumberOfThreads();
@@ -137,21 +137,20 @@ DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
   m_PixelCount.Fill(0);
 
   // Compute distance from non-zero pixels in the second image
-  typedef itk::SignedMaurerDistanceMapImageFilter< InputImage2Type, DistanceMapType >
-  FilterType;
-  typename FilterType::Pointer filter = FilterType::New();
+  typename DistanceMapGenerationFilter::Pointer filter = DistanceMapGenerationFilter::New();
 
   filter->SetInput( this->GetInput2() );
   filter->SetSquaredDistance(false);
   filter->SetUseImageSpacing(m_UseImageSpacing);
+  filter->SetInsideIsPositive(true);
   filter->Update();
 
   m_DistanceMap = filter->GetOutput();
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::AfterThreadedGenerateData()
 {
   ThreadIdType numberOfThreads = this->GetNumberOfThreads();
@@ -185,9 +184,9 @@ DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
   m_DistanceMap = NULL;
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::ThreadedGenerateData(const RegionType & regionForThread,
                        ThreadIdType threadId)
 {
@@ -218,9 +217,9 @@ DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
     }
 }
 
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2, class DistanceMapGenerationFilter >
 void
-DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
+DirectedHausdorffDistanceImageFilter< TInputImage1, TInputImage2, DistanceMapGenerationFilter >
 ::PrintSelf(std::ostream & os, Indent indent) const
 {
   Superclass::PrintSelf(os, indent);

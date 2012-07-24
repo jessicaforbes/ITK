@@ -23,6 +23,9 @@
 #include "itkProgressAccumulator.h"
 #include "itkDirectedHausdorffDistanceImageFilter.h"
 
+#include "itkSignedMaurerDistanceMapImageFilter.h"
+#include "itkSignedDanielssonDistanceMapImageFilter.h"
+
 namespace itk
 {
 template< class TInputImage1, class TInputImage2 >
@@ -114,7 +117,7 @@ HausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
 {
   ThreadIdType nbthreads = this->GetNumberOfThreads();
 
-  // Pass the first input through as the output
+  // Pass the first input through as the output //The output images is really useless in this case
   InputImage1Pointer image = const_cast< TInputImage1 * >( this->GetInput1() );
   this->GraftOutput(image);
 
@@ -123,41 +126,92 @@ HausdorffDistanceImageFilter< TInputImage1, TInputImage2 >
   ProgressAccumulator::Pointer progress = ProgressAccumulator::New();
   progress->SetMiniPipelineFilter(this);
 
-  typedef DirectedHausdorffDistanceImageFilter< InputImage1Type, InputImage2Type >
-  Filter12Type;
-  typename Filter12Type::Pointer filter12 = Filter12Type::New();
-  filter12->SetInput1( this->GetInput1() );
-  filter12->SetInput2( this->GetInput2() );
-  filter12->SetNumberOfThreads( nbthreads );
-  filter12->SetUseImageSpacing(m_UseImageSpacing);
-
-  typedef DirectedHausdorffDistanceImageFilter< InputImage2Type, InputImage1Type >
-  Filter21Type;
-  typename Filter21Type::Pointer filter21 = Filter21Type::New();
-  filter21->SetInput1( this->GetInput2() );
-  filter21->SetInput2( this->GetInput1() );
-  filter21->SetNumberOfThreads( nbthreads );
-  filter21->SetUseImageSpacing(m_UseImageSpacing);
-
-  // Register the filter with the with progress accumulator using
-  // equal weight proportion
-  progress->RegisterInternalFilter(filter12, .5f);
-  progress->RegisterInternalFilter(filter21, .5f);
-
-  filter12->Update();
-  const RealType distance12 = filter12->GetDirectedHausdorffDistance();
-  filter21->Update();
-  const RealType distance21 = filter21->GetDirectedHausdorffDistance();
-
-  if ( distance12 > distance21 )
+#if 1
     {
-    m_HausdorffDistance = distance12;
+    std::cout << "HACK:  SignedMaurerDistanceMapping" << std::endl;
+    typedef DirectedHausdorffDistanceImageFilter< InputImage1Type, InputImage2Type, typename itk::SignedMaurerDistanceMapImageFilter< InputImage2Type, InputImage1Type > > Filter12Type;
+    typename Filter12Type::Pointer filter12 = Filter12Type::New();
+    // Register the filter with the with progress accumulator using equal weight proportion
+    progress->RegisterInternalFilter(filter12, .5f);
+
+    filter12->SetInput1( this->GetInput1() );
+    filter12->SetInput2( this->GetInput2() );
+    filter12->SetNumberOfThreads( nbthreads );
+    filter12->SetUseImageSpacing(m_UseImageSpacing);
+    filter12->Update();
+    const RealType distance12 = filter12->GetDirectedHausdorffDistance();
+
+    typedef DirectedHausdorffDistanceImageFilter< InputImage2Type, InputImage1Type, typename itk::SignedMaurerDistanceMapImageFilter< InputImage1Type, InputImage2Type > > Filter21Type;
+    typename Filter21Type::Pointer filter21 = Filter21Type::New();
+    // Register the filter with the with progress accumulator using equal weight proportion
+    progress->RegisterInternalFilter(filter21, .5f);
+
+    filter21->SetInput1( this->GetInput2() );
+    filter21->SetInput2( this->GetInput1() );
+    filter21->SetNumberOfThreads( nbthreads );
+    filter21->SetUseImageSpacing(m_UseImageSpacing);
+    filter21->Update();
+    const RealType distance21 = filter21->GetDirectedHausdorffDistance();
+
+    if ( distance12 > distance21 )
+      {
+      m_HausdorffDistance = distance12;
+      }
+    else
+      {
+      m_HausdorffDistance = distance21;
+      }
+    m_AverageHausdorffDistance = ( filter12->GetAverageHausdorffDistance() + filter21->GetAverageHausdorffDistance() ) * 0.5;
+
+    std::cout << "Distance12 " << distance12 << std::endl;
+    std::cout << "Distance21 " << distance21 << std::endl;
+    std::cout << "AverageDistance12 " << filter12->GetAverageHausdorffDistance() << std::endl;
+    std::cout << "AverageDistance21 " << filter21->GetAverageHausdorffDistance() << std::endl;
+    std::cout << "AverageDistance " << m_AverageHausdorffDistance << std::endl;
     }
-  else
+#endif
     {
-    m_HausdorffDistance = distance21;
+    std::cout << "HACK:  SignedDanielssonDistanceMapping" << std::endl;
+    typedef DirectedHausdorffDistanceImageFilter< InputImage1Type, InputImage2Type, typename itk::SignedDanielssonDistanceMapImageFilter< InputImage2Type, InputImage1Type > > Filter12Type;
+    typename Filter12Type::Pointer filter12 = Filter12Type::New();
+    // Register the filter with the with progress accumulator using equal weight proportion
+    progress->RegisterInternalFilter(filter12, .5f);
+
+    filter12->SetInput1( this->GetInput1() );
+    filter12->SetInput2( this->GetInput2() );
+    filter12->SetNumberOfThreads( nbthreads );
+    filter12->SetUseImageSpacing(m_UseImageSpacing);
+    filter12->Update();
+    const RealType distance12 = filter12->GetDirectedHausdorffDistance();
+
+    typedef DirectedHausdorffDistanceImageFilter< InputImage2Type, InputImage1Type, typename itk::SignedDanielssonDistanceMapImageFilter< InputImage1Type, InputImage2Type > > Filter21Type;
+    typename Filter21Type::Pointer filter21 = Filter21Type::New();
+    // Register the filter with the with progress accumulator using equal weight proportion
+    progress->RegisterInternalFilter(filter21, .5f);
+
+    filter21->SetInput1( this->GetInput2() );
+    filter21->SetInput2( this->GetInput1() );
+    filter21->SetNumberOfThreads( nbthreads );
+    filter21->SetUseImageSpacing(m_UseImageSpacing);
+    filter21->Update();
+    const RealType distance21 = filter21->GetDirectedHausdorffDistance();
+
+    if ( distance12 > distance21 )
+      {
+      m_HausdorffDistance = distance12;
+      }
+    else
+      {
+      m_HausdorffDistance = distance21;
+      }
+    m_AverageHausdorffDistance = ( filter12->GetAverageHausdorffDistance() + filter21->GetAverageHausdorffDistance() ) * 0.5;
+
+    std::cout << "Distance12 " << distance12 << std::endl;
+    std::cout << "Distance21 " << distance21 << std::endl;
+    std::cout << "AverageDistance12 " << filter12->GetAverageHausdorffDistance() << std::endl;
+    std::cout << "AverageDistance21 " << filter21->GetAverageHausdorffDistance() << std::endl;
+    std::cout << "AverageDistance " << m_AverageHausdorffDistance << std::endl;
     }
-  m_AverageHausdorffDistance = ( filter12->GetAverageHausdorffDistance() + filter21->GetAverageHausdorffDistance() ) * 0.5;
 }
 
 template< class TInputImage1, class TInputImage2 >

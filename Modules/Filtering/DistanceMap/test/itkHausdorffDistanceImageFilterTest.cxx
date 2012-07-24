@@ -19,6 +19,8 @@
 #include "itkHausdorffDistanceImageFilter.h"
 #include "itkFilterWatcher.h"
 
+#include "itkImageFileWriter.h"
+
 int itkHausdorffDistanceImageFilterTest(int, char* [] )
 {
 
@@ -31,7 +33,7 @@ int itkHausdorffDistanceImageFilterTest(int, char* [] )
 
   Image1Type::Pointer image1 = Image1Type::New();
   Image2Type::Pointer image2 = Image2Type::New();
-
+  { //Make the images
   Image1Type::SizeType size;
   size.Fill( 50 );
 
@@ -61,37 +63,63 @@ int itkHausdorffDistanceImageFilterTest(int, char* [] )
   region2.SetSize( size );
   region2.SetIndex( index );
 
-  itk::ImageRegionIterator<Image1Type> it1( image1, region1 );
-  Pixel1Type count = itk::NumericTraits<Pixel1Type>::Zero;
-  while ( !it1.IsAtEnd() )
     {
-    it1.Set( ++count );
-    ++it1;
+    itk::ImageRegionIterator<Image1Type> it1( image1, region1 );
+    while ( !it1.IsAtEnd() )
+      {
+      it1.Set( itk::NumericTraits<Pixel1Type>::One );
+      ++it1;
+      }
     }
-
   itk::ImageRegionIterator<Image2Type> it2( image2, region2 );
   while ( !it2.IsAtEnd() )
     {
-    it2.Set( 7.2 );
+    it2.Set( itk::NumericTraits<Pixel2Type>::One );
     ++it2;
+    }
+
+    {
+    typedef itk::ImageFileWriter<Image1Type>   WriterType;
+    WriterType::Pointer writer = WriterType::New();
+    writer->SetInput( image1 );
+    writer->SetFileName( "i1.nii.gz" );
+    writer->Update();
+    }
+
+    {
+    typedef itk::ImageFileWriter<Image2Type>   WriterType;
+    WriterType::Pointer writer = WriterType::New();
+    writer->SetInput( image2 );
+    writer->SetFileName( "i2.nii.gz" );
+    writer->Update();
+    }
     }
 
   int exit_status=EXIT_SUCCESS; //If no failures detected, then EXIT_SUCCESS
   // compute the directed Hausdorff distance h(image1,image2)
   {
-  typedef itk::DirectedHausdorffDistanceImageFilter<Image1Type,Image2Type> FilterType;
+  typedef itk::DirectedHausdorffDistanceImageFilter<Image1Type,Image2Type, itk::SignedDanielssonDistanceMapImageFilter< Image2Type, Image1Type > > FilterType;
   FilterType::Pointer filter = FilterType::New();
   FilterWatcher watcher(filter, "filter");
 
   filter->SetInput1( image1 );
   filter->SetInput2( image2 );
+  filter->SetUseImageSpacing(true);
   filter->Update();
   filter->Print( std::cout );
+    { //HACK
+    typedef itk::ImageFileWriter<Image1Type>   WriterType;
+    WriterType::Pointer writer = WriterType::New();
+    writer->SetInput( filter->GetOutput() );
+    writer->SetFileName( "h12.nii.gz" );
+    writer->Update();
+    }
 
   // check results
   const FilterType::RealType trueDistance = 10 * vcl_sqrt( static_cast<double>(ImageDimension) );
   const FilterType::RealType distance = filter->GetDirectedHausdorffDistance();
 
+  std::cout << "directed Hausdorff distance h(image1,image2)" << std::endl;
   std::cout << " True distance: " << trueDistance << std::endl;
   std::cout << " Computed computed: " << distance << std::endl;
   std::cout << " Average distance: " << filter->GetAverageHausdorffDistance() << std::endl;
@@ -109,17 +137,19 @@ int itkHausdorffDistanceImageFilterTest(int, char* [] )
 
   // compute the directed Hausdorff distance h(image2,image1)
   {
-  typedef itk::DirectedHausdorffDistanceImageFilter<Image2Type,Image1Type> FilterType;
+  typedef itk::DirectedHausdorffDistanceImageFilter<Image2Type,Image1Type, itk::SignedDanielssonDistanceMapImageFilter< Image1Type, Image2Type > > FilterType;
   FilterType::Pointer filter = FilterType::New();
 
   filter->SetInput1( image2 );
   filter->SetInput2( image1 );
+  filter->SetUseImageSpacing(true);
   filter->Update();
 
   // check results
   const FilterType::RealType trueDistance = 5 * vcl_sqrt( static_cast<double>(ImageDimension) );
   const FilterType::RealType distance = filter->GetDirectedHausdorffDistance();
 
+  std::cout << "directed Hausdorff distance h(image2,image1)" << std::endl;
   std::cout << " True distance: " << trueDistance << std::endl;
   std::cout << " Computed computed: " << distance << std::endl;
   std::cout << " Average distance: " << filter->GetAverageHausdorffDistance() << std::endl;
@@ -138,17 +168,19 @@ int itkHausdorffDistanceImageFilterTest(int, char* [] )
 
   // compute the Hausdorff distance H(image1,image2)
   {
-  typedef itk::HausdorffDistanceImageFilter<Image1Type,Image2Type> FilterType;
+  typedef itk::HausdorffDistanceImageFilter<Image1Type,Image2Type > FilterType;
   FilterType::Pointer filter = FilterType::New();
 
   filter->SetInput1( image1 );
   filter->SetInput2( image2 );
+  filter->SetUseImageSpacing(true);
   filter->Update();
 
   // check results
   const FilterType::RealType trueDistance = 10 * vcl_sqrt( static_cast<double>(ImageDimension) );
   const FilterType::RealType distance = filter->GetHausdorffDistance();
 
+  std::cout << "Hausdorff distance H(image1,image2)" << std::endl;
   std::cout << " True distance: " << trueDistance << std::endl;
   std::cout << " Computed computed: " << distance << std::endl;
   std::cout << " Average distance: " << filter->GetAverageHausdorffDistance() << std::endl;
@@ -178,6 +210,7 @@ int itkHausdorffDistanceImageFilterTest(int, char* [] )
   const FilterType::RealType trueDistance = 10 * vcl_sqrt( static_cast<double>(ImageDimension) );
   const FilterType::RealType distance = filter->GetHausdorffDistance();
 
+  std::cout << "Hausdorff distance H(image2,image1)" << std::endl;
   std::cout << " True distance: " << trueDistance << std::endl;
   std::cout << " Computed computed: " << distance << std::endl;
   std::cout << " Average distance: " << filter->GetAverageHausdorffDistance() << std::endl;
@@ -219,6 +252,7 @@ int itkHausdorffDistanceImageFilterTest(int, char* [] )
   const FilterType::RealType trueAverageDistance = 4.5 * spacing1[0];
   const FilterType::RealType distance = filter->GetHausdorffDistance();
 
+  std::cout << "Hausdorff distance H(image2,image1) : Spacing=0.5" << std::endl;
   std::cout << " True distance: " << trueDistance << std::endl;
   std::cout << " Computed computed: " << distance << std::endl;
   std::cout << " Average distance: " << filter->GetAverageHausdorffDistance() << std::endl;
@@ -244,5 +278,4 @@ int itkHausdorffDistanceImageFilterTest(int, char* [] )
     std::cout << "All Test failed. " << std::endl;
     }
   return exit_status;
-
 }

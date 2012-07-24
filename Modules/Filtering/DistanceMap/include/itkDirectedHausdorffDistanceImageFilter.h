@@ -23,6 +23,8 @@
 #include "itkArray.h"
 #include "itkCompensatedSummation.h"
 
+#include "itkSignedMaurerDistanceMapImageFilter.h"
+
 namespace itk
 {
 /** \class DirectedHausdorffDistanceImageFilter
@@ -38,7 +40,7 @@ namespace itk
  * to the nearest neighbor in \f$B\f$. Note that this function is not
  * is not symmetric and hence is not a true distance.
  *
- * In particular, this filter uses the MaurerDistanceMapImageFilter inside to
+ * In particular, this filter defaults to using the SignedMaurerDistanceMapImageFilter inside to
  * compute distance map from all non-zero pixels in the second image. It then
  * find the largest distance (in pixels) within the set of all non-zero pixels in the first
  * image.
@@ -54,13 +56,16 @@ namespace itk
  * This filter is templated over the two input image type. It assume
  * both image have the same number of dimensions.
  *
- * \sa MaurerDistanceMapImageFilter
+ * \sa SignedMaurerDistanceMapImageFilter
  * \sa HausdorffDistanceImageFilter
  *
  * \ingroup MultiThreaded
  * \ingroup ITKDistanceMap
  */
-template< class TInputImage1, class TInputImage2 >
+template< class TInputImage1, class TInputImage2,
+  class DistanceMapGenerationFilter = typename itk::SignedMaurerDistanceMapImageFilter< TInputImage2,
+   typename itk::Image< typename NumericTraits< typename TInputImage1::PixelType >::RealType , TInputImage1::ImageDimension > >
+  >
 class ITK_EXPORT DirectedHausdorffDistanceImageFilter:
   public ImageToImageFilter< TInputImage1, TInputImage1 >
 {
@@ -155,9 +160,10 @@ private:
   DirectedHausdorffDistanceImageFilter(const Self &); //purposely not implemented
   void operator=(const Self &);                       //purposely not implemented
 
-  typedef Image< RealType, itkGetStaticConstMacro(ImageDimension) > DistanceMapType;
-  typedef typename DistanceMapType::Pointer                         DistanceMapPointer;
+  //typedef Image< RealType, itkGetStaticConstMacro(ImageDimension) > DistanceMapType;
 
+  typedef typename DistanceMapGenerationFilter::OutputImageType DistanceMapType;
+  typedef typename DistanceMapType::Pointer                     DistanceMapPointer;
 
   DistanceMapPointer      m_DistanceMap;
 
