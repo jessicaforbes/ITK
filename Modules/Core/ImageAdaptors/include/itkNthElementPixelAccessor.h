@@ -27,7 +27,7 @@ namespace itk
  *
  * This class is intended to be used as parameter of
  * an ImageAdaptor to make a  Container appears as being
- * of scalar type T, showing only the N-th component.
+ * of scalar type TType, showing only the N-th component.
  *
  * This class is templated over the container type.
  * Any container type that provides a method:
@@ -45,35 +45,45 @@ namespace itk
  * \ingroup ITKImageAdaptors
  */
 
-template< class T, class TContainer >
+template< class TType, class TContainer >
 class ITK_EXPORT NthElementPixelAccessor
 {
 public:
   /** Standard class typedefs. */
-  typedef   NthElementPixelAccessor Self;
+  typedef NthElementPixelAccessor Self;
 
-  /** that this class will exhibit */
-  typedef T ExternalType;
+  /** External typedef. It defines the external aspect
+   * that this class will exhibit. */
+  typedef TType ExternalType;
 
+  /** Internal typedef used by the ImageAdaptor for the buffer pointer */
   /** Internal typedef. It defines the internal real
    * representation of data */
-  typedef   TContainer InternalType;
+  typedef  TContainer InternalType;
 
   /** Write access to the NthElement component */
   inline void Set(InternalType & output, const ExternalType & input) const
-  { output[m_ElementNumber] =  input; }
+  {
+  output[m_ElementNumber] =  input;
+  }
 
   /** Read access to the NthElement component */
   inline ExternalType Get(const InternalType & input) const
-  { return static_cast< ExternalType >( input[m_ElementNumber] ); }
+  {
+  return static_cast< ExternalType >( input[m_ElementNumber] );
+  }
 
   /** Get the element number to access in the container */
   unsigned int GetElementNumber(void) const
-  { return m_ElementNumber; }
+  {
+  return m_ElementNumber;
+  }
 
   /** Set the element number to access in the container */
   void SetElementNumber(unsigned int nth)
-  { m_ElementNumber = nth; }
+  {
+  m_ElementNumber = nth;
+  }
 
   /** operator!=. This is needed to convert a pixel accessor to a functor.
    * \sa AdaptImageFilter */
@@ -99,6 +109,6 @@ private:
   // Identifier of the N-th element to be accessed
   unsigned int m_ElementNumber;
 };
-}  // end namespace itk
+} // end namespace itk
 
 #endif

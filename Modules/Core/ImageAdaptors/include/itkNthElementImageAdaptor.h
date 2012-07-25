@@ -40,31 +40,16 @@ namespace itk
  * \wikiexample{ImageProcessing/ProcessingNthImageElement,Process the nth component/element/channel of a vector image}
  * \endwiki
  */
-
-// Create a helper class to help the SunPro CC compiler
-// parse the templates for the NthElementImageAdaptor.
-// This is used to define the Super class.  for NthElementImageAdaptor
-template< class TImage, class TOutputPixelType >
-class ITK_EXPORT NthElementImageAdaptorHelper
-{
-public:
-  typedef  NthElementPixelAccessor<
-    TOutputPixelType,
-    typename TImage::PixelType > PixelAccessor;
-
-  typedef  ImageAdaptor< TImage, PixelAccessor > Super;
-};
-
 template< class TImage, class TOutputPixelType >
 class ITK_EXPORT NthElementImageAdaptor:
-  public NthElementImageAdaptorHelper< TImage, TOutputPixelType >::Super
+  public ImageAdaptor< TImage, NthElementPixelAccessor< TOutputPixelType, typename TImage::PixelType >  >
 {
 public:
   /** Standard class typedefs. */
-  typedef NthElementImageAdaptor                                                   Self;
-  typedef typename NthElementImageAdaptorHelper< TImage, TOutputPixelType >::Super Superclass;
-  typedef SmartPointer< Self >                                                     Pointer;
-  typedef SmartPointer< const Self >                                               ConstPointer;
+  typedef NthElementImageAdaptor                                                                           Self;
+  typedef ImageAdaptor< TImage, NthElementPixelAccessor< TOutputPixelType, typename TImage::PixelType >  > Superclass;
+  typedef SmartPointer< Self >                                                                             Pointer;
+  typedef SmartPointer< const Self >                                                                       ConstPointer;
 
   /** Run-time type information (and related methods). */
   itkTypeMacro(NthElementImageAdaptor, ImageAdaptor);
